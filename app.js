@@ -90,7 +90,11 @@ async function loadFiles() {
             const channelId = webhookInfo.channel_id;
             const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
             
-            const messagesResponse = await fetchWithRetry(messagesUrl);
+            const messagesResponse = await fetchWithRetry(messagesUrl, {
+                headers: {
+                    'Authorization': webhookInfo.token
+                }
+            });
             
             if (messagesResponse.ok) {
                 const messages = await messagesResponse.json();
@@ -323,4 +327,5 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3) {
             if (i === maxRetries - 1) throw error;
         }
     }
+    throw new Error('Max retries reached');
 }
