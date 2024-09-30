@@ -80,7 +80,7 @@ function generateFileId() {
 async function loadFiles() {
     try {
         console.log('Webhook URL:', webhookUrl);
-        const response = await fetch(webhookUrl + '/messages');
+        const response = await fetch(webhookUrl + '/messages?limit=100');
         console.log('Response status:', response.status);
         
         if (response.ok) {
@@ -142,7 +142,7 @@ async function loadFiles() {
 
 async function downloadFile(fileId) {
     try {
-        const response = await fetch(webhookUrl + '/messages');
+        const response = await fetch(webhookUrl + '/messages?limit=100');
         if (response.ok) {
             const messages = await response.json();
             const fileChunks = messages
@@ -198,7 +198,7 @@ async function downloadFile(fileId) {
 
 async function deleteFile(fileId) {
     try {
-        const response = await fetch(webhookUrl + '/messages');
+        const response = await fetch(webhookUrl + '/messages?limit=100');
         if (response.ok) {
             const messages = await response.json();
             const fileMessages = messages.filter(message => {
