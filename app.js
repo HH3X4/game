@@ -83,7 +83,13 @@ async function loadFiles() {
         if (response.ok) {
             const data = await response.json();
             console.log('Parsed data:', data);
-            const messages = Array.isArray(data) ? data : data.messages || [];
+            
+            let messages = [];
+            if (Array.isArray(data)) {
+                messages = data;
+            } else if (data && typeof data === 'object') {
+                messages = data.messages || [];
+            }
             
             if (!Array.isArray(messages)) {
                 throw new Error('Invalid response format');
@@ -95,38 +101,40 @@ async function loadFiles() {
             const files = {};
 
             messages.forEach(message => {
-                try {
-                    const fileInfo = JSON.parse(message.content);
-                    if (!files[fileInfo.fileId]) {
-                        files[fileInfo.fileId] = {
-                            name: fileInfo.fileName,
-                            type: fileInfo.fileType,
-                            size: fileInfo.fileSize,
-                            chunks: new Array(fileInfo.totalChunks).fill(null)
-                        };
+                if (message && message.content && message.attachments) {
+                    try {
+                        const fileInfo = JSON.parse(message.content);
+                        if (!files[fileInfo.fileId]) {
+                            files[fileInfo.fileId] = {
+                                name: fileInfo.fileName,
+                                type: fileInfo.fileType,
+                                size: fileInfo.fileSize,
+                                chunks: new Array(fileInfo.totalChunks).fill(null)
+                            };
+                        }
+                        files[fileInfo.fileId].chunks[fileInfo.chunkIndex] = message.attachments[0].url;
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
                     }
-                    files[fileInfo.fileId].chunks[fileInfo.chunkIndex] = message.attachments[0].url;
-                } catch (error) {
-                    console.error('Error parsing message:', error);
                 }
             });
 
             if (Object.keys(files).length === 0) {
                 fileList.innerHTML = '<p>No files found.</p>';
+            } else {
+                Object.entries(files).forEach(([fileId, fileInfo]) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <span>${fileInfo.name} (${formatFileSize(fileInfo.size)})</span>
+                        <div class="file-actions">
+                            <button onclick="downloadFile('${fileId}')"><i class="fas fa-download"></i> Download</button>
+                            <button onclick="deleteFile('${fileId}')"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    `;
+                    fileList.appendChild(fileItem);
+                });
             }
-
-            Object.entries(files).forEach(([fileId, fileInfo]) => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item';
-                fileItem.innerHTML = `
-                    <span>${fileInfo.name} (${formatFileSize(fileInfo.size)})</span>
-                    <div class="file-actions">
-                        <button onclick="downloadFile('${fileId}')"><i class="fas fa-download"></i> Download</button>
-                        <button onclick="deleteFile('${fileId}')"><i class="fas fa-trash"></i> Delete</button>
-                    </div>
-                `;
-                fileList.appendChild(fileItem);
-            });
         } else {
             showToast('Error loading files');
         }
