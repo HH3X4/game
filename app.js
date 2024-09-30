@@ -80,7 +80,9 @@ function generateFileId() {
 async function loadFiles() {
     try {
         console.log('Webhook URL:', webhookUrl);
-        const response = await fetchWithRetry(webhookUrl + '/messages?limit=100');
+        const channelId = webhookUrl.split('/')[5];
+        const apiUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
+        const response = await fetchWithRetry(apiUrl);
         console.log('Response status:', response.status);
         
         if (response.ok) {
@@ -142,7 +144,9 @@ async function loadFiles() {
 
 async function downloadFile(fileId) {
     try {
-        const response = await fetchWithRetry(webhookUrl + '/messages?limit=100');
+        const channelId = webhookUrl.split('/')[5];
+        const apiUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
+        const response = await fetchWithRetry(apiUrl);
         if (response.ok) {
             const messages = await response.json();
             const fileChunks = messages
@@ -198,7 +202,9 @@ async function downloadFile(fileId) {
 
 async function deleteFile(fileId) {
     try {
-        const response = await fetchWithRetry(webhookUrl + '/messages?limit=100');
+        const channelId = webhookUrl.split('/')[5];
+        const apiUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
+        const response = await fetchWithRetry(apiUrl);
         if (response.ok) {
             const messages = await response.json();
             const fileMessages = messages.filter(message => {
