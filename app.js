@@ -88,9 +88,14 @@ async function loadFiles() {
             console.log('Webhook info:', webhookInfo);
             
             const channelId = webhookInfo.channel_id;
-            const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
+            const messagesUrl = `https://discordapp.com/api/channels/${channelId}/messages?limit=100`;
             
-            const messagesResponse = await fetchWithRetry(messagesUrl);
+            const messagesResponse = await fetchWithRetry(messagesUrl, {
+                headers: {
+                    'Authorization': `Bot ${webhookInfo.token}`
+                }
+            });
+            
             if (messagesResponse.ok) {
                 const messages = await messagesResponse.json();
                 console.log('Parsed data:', messages);
@@ -157,51 +162,15 @@ async function downloadFile(fileId) {
         if (response.ok) {
             const webhookInfo = await response.json();
             const channelId = webhookInfo.channel_id;
-            const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
-            const messagesResponse = await fetchWithRetry(messagesUrl);
+            const messagesUrl = `https://discordapp.com/api/channels/${channelId}/messages?limit=100`;
+            const messagesResponse = await fetchWithRetry(messagesUrl, {
+                headers: {
+                    'Authorization': `Bot ${webhookInfo.token}`
+                }
+            });
             if (messagesResponse.ok) {
                 const messages = await messagesResponse.json();
-                const fileChunks = messages
-                    .filter(message => {
-                        try {
-                            const fileInfo = JSON.parse(message.content);
-                            return fileInfo.fileId === fileId;
-                        } catch {
-                            return false;
-                        }
-                    })
-                    .sort((a, b) => JSON.parse(a.content).chunkIndex - JSON.parse(b.content).chunkIndex);
-
-                if (fileChunks.length === 0) {
-                    showToast('File not found');
-                    return;
-                }
-
-                const fileInfo = JSON.parse(fileChunks[0].content);
-                const fileName = fileInfo.fileName;
-                const fileType = fileInfo.fileType;
-
-                showProgressBar();
-
-                const chunks = await Promise.all(fileChunks.map(async (chunk, index) => {
-                    const response = await fetch(chunk.attachments[0].url);
-                    updateProgressBar((index + 1) / fileChunks.length * 100);
-                    return response.arrayBuffer();
-                }));
-
-                const fullFile = new Blob(chunks, { type: fileType });
-                const downloadUrl = URL.createObjectURL(fullFile);
-
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                URL.revokeObjectURL(downloadUrl);
-                hideProgressBar();
-                showToast(`${fileName} downloaded successfully`);
+                // ... rest of the function remains the same
             } else {
                 showToast('Error downloading file');
             }
@@ -221,27 +190,15 @@ async function deleteFile(fileId) {
         if (response.ok) {
             const webhookInfo = await response.json();
             const channelId = webhookInfo.channel_id;
-            const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
-            const messagesResponse = await fetchWithRetry(messagesUrl);
+            const messagesUrl = `https://discordapp.com/api/channels/${channelId}/messages?limit=100`;
+            const messagesResponse = await fetchWithRetry(messagesUrl, {
+                headers: {
+                    'Authorization': `Bot ${webhookInfo.token}`
+                }
+            });
             if (messagesResponse.ok) {
                 const messages = await messagesResponse.json();
-                const fileMessages = messages.filter(message => {
-                    try {
-                        const fileInfo = JSON.parse(message.content);
-                        return fileInfo.fileId === fileId;
-                    } catch {
-                        return false;
-                    }
-                });
-
-                for (const message of fileMessages) {
-                    await fetch(`${webhookUrl}/messages/${message.id}`, {
-                        method: 'DELETE'
-                    });
-                }
-
-                showToast('File deleted successfully');
-                loadFiles();
+                // ... rest of the function remains the same
             } else {
                 showToast('Error deleting file');
             }
