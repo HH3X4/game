@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hexa Box</title>
+    <title>Hexa Box - Advanced Discord Storage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -24,6 +24,9 @@
                     <label for="file-input"><i class="fas fa-cloud-upload-alt"></i> Choose Files</label>
                     <button id="upload-button">Upload</button>
                 </div>
+                <div id="progress-bar" class="hidden">
+                    <div id="progress"></div>
+                </div>
                 <div id="file-list"></div>
             </div>
         </main>
@@ -32,6 +35,7 @@
         </footer>
     </div>
     <div id="toast"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
