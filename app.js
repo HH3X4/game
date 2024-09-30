@@ -80,56 +80,67 @@ function generateFileId() {
 async function loadFiles() {
     try {
         console.log('Webhook URL:', webhookUrl);
-        const response = await fetchWithRetry(webhookUrl + '?limit=100');
+        const response = await fetchWithRetry(webhookUrl);
         console.log('Response status:', response.status);
         
         if (response.ok) {
-            const messages = await response.json();
-            console.log('Parsed data:', messages);
+            const webhookInfo = await response.json();
+            console.log('Webhook info:', webhookInfo);
             
-            if (!Array.isArray(messages)) {
-                throw new Error('Invalid response format');
-            }
-
-            const fileList = document.getElementById('file-list');
-            fileList.innerHTML = '';
-
-            const files = {};
-
-            messages.forEach(message => {
-                if (message && message.content && message.attachments && message.attachments.length > 0) {
-                    try {
-                        const fileInfo = JSON.parse(message.content);
-                        if (!files[fileInfo.fileId]) {
-                            files[fileInfo.fileId] = {
-                                name: fileInfo.fileName,
-                                type: fileInfo.fileType,
-                                size: fileInfo.fileSize,
-                                chunks: new Array(fileInfo.totalChunks).fill(null)
-                            };
-                        }
-                        files[fileInfo.fileId].chunks[fileInfo.chunkIndex] = message.attachments[0].url;
-                    } catch (error) {
-                        console.error('Error parsing message:', error);
-                    }
+            const channelId = webhookInfo.channel_id;
+            const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
+            
+            const messagesResponse = await fetchWithRetry(messagesUrl);
+            if (messagesResponse.ok) {
+                const messages = await messagesResponse.json();
+                console.log('Parsed data:', messages);
+                
+                if (!Array.isArray(messages)) {
+                    throw new Error('Invalid response format');
                 }
-            });
 
-            if (Object.keys(files).length === 0) {
-                fileList.innerHTML = '<p>No files found.</p>';
-            } else {
-                Object.entries(files).forEach(([fileId, fileInfo]) => {
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'file-item';
-                    fileItem.innerHTML = `
-                        <span>${fileInfo.name} (${formatFileSize(fileInfo.size)})</span>
-                        <div class="file-actions">
-                            <button onclick="downloadFile('${fileId}')"><i class="fas fa-download"></i> Download</button>
-                            <button onclick="deleteFile('${fileId}')"><i class="fas fa-trash"></i> Delete</button>
-                        </div>
-                    `;
-                    fileList.appendChild(fileItem);
+                const fileList = document.getElementById('file-list');
+                fileList.innerHTML = '';
+
+                const files = {};
+
+                messages.forEach(message => {
+                    if (message && message.content && message.attachments && message.attachments.length > 0) {
+                        try {
+                            const fileInfo = JSON.parse(message.content);
+                            if (!files[fileInfo.fileId]) {
+                                files[fileInfo.fileId] = {
+                                    name: fileInfo.fileName,
+                                    type: fileInfo.fileType,
+                                    size: fileInfo.fileSize,
+                                    chunks: new Array(fileInfo.totalChunks).fill(null)
+                                };
+                            }
+                            files[fileInfo.fileId].chunks[fileInfo.chunkIndex] = message.attachments[0].url;
+                        } catch (error) {
+                            console.error('Error parsing message:', error);
+                        }
+                    }
                 });
+
+                if (Object.keys(files).length === 0) {
+                    fileList.innerHTML = '<p>No files found.</p>';
+                } else {
+                    Object.entries(files).forEach(([fileId, fileInfo]) => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+                        fileItem.innerHTML = `
+                            <span>${fileInfo.name} (${formatFileSize(fileInfo.size)})</span>
+                            <div class="file-actions">
+                                <button onclick="downloadFile('${fileId}')"><i class="fas fa-download"></i> Download</button>
+                                <button onclick="deleteFile('${fileId}')"><i class="fas fa-trash"></i> Delete</button>
+                            </div>
+                        `;
+                        fileList.appendChild(fileItem);
+                    });
+                }
+            } else {
+                throw new Error(`HTTP error! status: ${messagesResponse.status}`);
             }
         } else {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -142,50 +153,58 @@ async function loadFiles() {
 
 async function downloadFile(fileId) {
     try {
-        const response = await fetchWithRetry(webhookUrl + '?limit=100');
+        const response = await fetchWithRetry(webhookUrl);
         if (response.ok) {
-            const messages = await response.json();
-            const fileChunks = messages
-                .filter(message => {
-                    try {
-                        const fileInfo = JSON.parse(message.content);
-                        return fileInfo.fileId === fileId;
-                    } catch {
-                        return false;
-                    }
-                })
-                .sort((a, b) => JSON.parse(a.content).chunkIndex - JSON.parse(b.content).chunkIndex);
+            const webhookInfo = await response.json();
+            const channelId = webhookInfo.channel_id;
+            const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
+            const messagesResponse = await fetchWithRetry(messagesUrl);
+            if (messagesResponse.ok) {
+                const messages = await messagesResponse.json();
+                const fileChunks = messages
+                    .filter(message => {
+                        try {
+                            const fileInfo = JSON.parse(message.content);
+                            return fileInfo.fileId === fileId;
+                        } catch {
+                            return false;
+                        }
+                    })
+                    .sort((a, b) => JSON.parse(a.content).chunkIndex - JSON.parse(b.content).chunkIndex);
 
-            if (fileChunks.length === 0) {
-                showToast('File not found');
-                return;
+                if (fileChunks.length === 0) {
+                    showToast('File not found');
+                    return;
+                }
+
+                const fileInfo = JSON.parse(fileChunks[0].content);
+                const fileName = fileInfo.fileName;
+                const fileType = fileInfo.fileType;
+
+                showProgressBar();
+
+                const chunks = await Promise.all(fileChunks.map(async (chunk, index) => {
+                    const response = await fetch(chunk.attachments[0].url);
+                    updateProgressBar((index + 1) / fileChunks.length * 100);
+                    return response.arrayBuffer();
+                }));
+
+                const fullFile = new Blob(chunks, { type: fileType });
+                const downloadUrl = URL.createObjectURL(fullFile);
+
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                URL.revokeObjectURL(downloadUrl);
+                hideProgressBar();
+                showToast(`${fileName} downloaded successfully`);
+            } else {
+                showToast('Error downloading file');
             }
-
-            const fileInfo = JSON.parse(fileChunks[0].content);
-            const fileName = fileInfo.fileName;
-            const fileType = fileInfo.fileType;
-
-            showProgressBar();
-
-            const chunks = await Promise.all(fileChunks.map(async (chunk, index) => {
-                const response = await fetch(chunk.attachments[0].url);
-                updateProgressBar((index + 1) / fileChunks.length * 100);
-                return response.arrayBuffer();
-            }));
-
-            const fullFile = new Blob(chunks, { type: fileType });
-            const downloadUrl = URL.createObjectURL(fullFile);
-
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            URL.revokeObjectURL(downloadUrl);
-            hideProgressBar();
-            showToast(`${fileName} downloaded successfully`);
         } else {
             showToast('Error downloading file');
         }
@@ -198,26 +217,34 @@ async function downloadFile(fileId) {
 
 async function deleteFile(fileId) {
     try {
-        const response = await fetchWithRetry(webhookUrl + '?limit=100');
+        const response = await fetchWithRetry(webhookUrl);
         if (response.ok) {
-            const messages = await response.json();
-            const fileMessages = messages.filter(message => {
-                try {
-                    const fileInfo = JSON.parse(message.content);
-                    return fileInfo.fileId === fileId;
-                } catch {
-                    return false;
-                }
-            });
-
-            for (const message of fileMessages) {
-                await fetch(`${webhookUrl}/messages/${message.id}`, {
-                    method: 'DELETE'
+            const webhookInfo = await response.json();
+            const channelId = webhookInfo.channel_id;
+            const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
+            const messagesResponse = await fetchWithRetry(messagesUrl);
+            if (messagesResponse.ok) {
+                const messages = await messagesResponse.json();
+                const fileMessages = messages.filter(message => {
+                    try {
+                        const fileInfo = JSON.parse(message.content);
+                        return fileInfo.fileId === fileId;
+                    } catch {
+                        return false;
+                    }
                 });
-            }
 
-            showToast('File deleted successfully');
-            loadFiles();
+                for (const message of fileMessages) {
+                    await fetch(`${webhookUrl}/messages/${message.id}`, {
+                        method: 'DELETE'
+                    });
+                }
+
+                showToast('File deleted successfully');
+                loadFiles();
+            } else {
+                showToast('Error deleting file');
+            }
         } else {
             showToast('Error deleting file');
         }
