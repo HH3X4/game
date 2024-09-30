@@ -80,19 +80,14 @@ function generateFileId() {
 async function loadFiles() {
     try {
         console.log('Webhook URL:', webhookUrl);
-        const response = await fetch(webhookUrl);
+        const response = await fetch(webhookUrl + '/messages');
         console.log('Response status:', response.status);
         
         if (response.ok) {
-            const data = await response.json();
-            console.log('Parsed data:', data);
+            const messages = await response.json();
+            console.log('Parsed data:', messages);
             
-            let messages = [];
-            if (Array.isArray(data)) {
-                messages = data;
-            } else if (data && typeof data === 'object' && data.messages) {
-                messages = data.messages;
-            } else {
+            if (!Array.isArray(messages)) {
                 throw new Error('Invalid response format');
             }
 
@@ -147,7 +142,7 @@ async function loadFiles() {
 
 async function downloadFile(fileId) {
     try {
-        const response = await fetch(webhookUrl);
+        const response = await fetch(webhookUrl + '/messages');
         if (response.ok) {
             const messages = await response.json();
             const fileChunks = messages
@@ -203,7 +198,7 @@ async function downloadFile(fileId) {
 
 async function deleteFile(fileId) {
     try {
-        const response = await fetch(webhookUrl);
+        const response = await fetch(webhookUrl + '/messages');
         if (response.ok) {
             const messages = await response.json();
             const fileMessages = messages.filter(message => {
