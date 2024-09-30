@@ -302,6 +302,13 @@ window.addEventListener('load', () => {
 });
 
 async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+    if (!options.headers) {
+        options.headers = {};
+    }
+    if (!options.headers['Authorization'] && webhookUrl) {
+        const webhookInfo = await (await fetch(webhookUrl)).json();
+        options.headers['Authorization'] = `Bot ${webhookInfo.token}`;
+    }
     for (let i = 0; i < maxRetries; i++) {
         try {
             const response = await fetch(url, options);
