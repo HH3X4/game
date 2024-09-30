@@ -81,7 +81,14 @@ async function loadFiles() {
     try {
         const response = await fetch(webhookUrl);
         if (response.ok) {
-            const messages = await response.json();
+            const data = await response.json();
+            console.log('Parsed data:', data);
+            const messages = Array.isArray(data) ? data : data.messages || [];
+            
+            if (!Array.isArray(messages)) {
+                throw new Error('Invalid response format');
+            }
+
             const fileList = document.getElementById('file-list');
             fileList.innerHTML = '';
 
@@ -103,6 +110,10 @@ async function loadFiles() {
                     console.error('Error parsing message:', error);
                 }
             });
+
+            if (Object.keys(files).length === 0) {
+                fileList.innerHTML = '<p>No files found.</p>';
+            }
 
             Object.entries(files).forEach(([fileId, fileInfo]) => {
                 const fileItem = document.createElement('div');
@@ -249,3 +260,19 @@ window.addEventListener('load', () => {
         loadFiles();
     }
 });
+
+async function fetchWithRetry(url, options, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, options);
+            if (response.status === 429) {
+                const retryAfter = response.headers.get('Retry-After') || 5;
+                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+            } else {
+                return response;
+            }
+        } catch (error) {
+            if (i === maxRetries - 1) throw error;
+        }
+    }
+}
