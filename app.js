@@ -80,21 +80,17 @@ function generateFileId() {
 async function loadFiles() {
     try {
         console.log('Webhook URL:', webhookUrl);
-        const response = await fetchWithRetry(webhookUrl);
-        console.log('Response status:', response.status);
+        const webhookResponse = await fetchWithRetry(webhookUrl);
+        console.log('Response status:', webhookResponse.status);
         
-        if (response.ok) {
-            const webhookInfo = await response.json();
+        if (webhookResponse.ok) {
+            const webhookInfo = await webhookResponse.json();
             console.log('Webhook info:', webhookInfo);
             
             const channelId = webhookInfo.channel_id;
             const messagesUrl = `https://discord.com/api/v9/channels/${channelId}/messages?limit=100`;
             
-            const messagesResponse = await fetchWithRetry(messagesUrl, {
-                headers: {
-                    'Authorization': `Bot ${webhookInfo.token}`
-                }
-            });
+            const messagesResponse = await fetchWithRetry(messagesUrl);
             
             if (messagesResponse.ok) {
                 const messages = await messagesResponse.json();
@@ -144,7 +140,7 @@ async function loadFiles() {
                 throw new Error(`HTTP error! status: ${messagesResponse.status}`);
             }
         } else {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${webhookResponse.status}`);
         }
     } catch (error) {
         console.error('Error loading files:', error);
@@ -306,8 +302,13 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3) {
         options.headers = {};
     }
     if (!options.headers['Authorization'] && webhookUrl) {
-        const webhookInfo = await (await fetch(webhookUrl)).json();
-        options.headers['Authorization'] = `Bot ${webhookInfo.token}`;
+        const webhookResponse = await fetch(webhookUrl);
+        if (webhookResponse.ok) {
+            const webhookInfo = await webhookResponse.json();
+            options.headers['Authorization'] = `Bot ${webhookInfo.token}`;
+        } else {
+            throw new Error('Failed to fetch webhook information');
+        }
     }
     for (let i = 0; i < maxRetries; i++) {
         try {
