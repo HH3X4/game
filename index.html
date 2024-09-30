@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexa Box</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-cube"></i> Hexa Box</h1>
+        </header>
+        <main>
+            <div id="setup-section">
+                <h2>Setup</h2>
+                <input type="text" id="webhook-url" placeholder="Enter Discord Webhook URL">
+                <button id="save-webhook">Save Webhook</button>
+            </div>
+            <div id="file-section" class="hidden">
+                <div class="upload-area">
+                    <input type="file" id="file-input" multiple>
+                    <label for="file-input"><i class="fas fa-cloud-upload-alt"></i> Choose Files</label>
+                    <button id="upload-button">Upload</button>
+                </div>
+                <div id="file-list"></div>
+            </div>
+        </main>
+        <footer>
+            <p>&copy; 2023 Hexa Box. All rights reserved.</p>
+        </footer>
+    </div>
+    <div id="toast"></div>
+    <script src="app.js"></script>
+</body>
+</html>
