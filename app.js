@@ -79,7 +79,10 @@ function generateFileId() {
 
 async function loadFiles() {
     try {
+        console.log('Webhook URL:', webhookUrl);
         const response = await fetch(webhookUrl);
+        console.log('Response status:', response.status);
+        
         if (response.ok) {
             const data = await response.json();
             console.log('Parsed data:', data);
@@ -87,11 +90,9 @@ async function loadFiles() {
             let messages = [];
             if (Array.isArray(data)) {
                 messages = data;
-            } else if (data && typeof data === 'object') {
-                messages = data.messages || [];
-            }
-            
-            if (!Array.isArray(messages)) {
+            } else if (data && typeof data === 'object' && data.messages) {
+                messages = data.messages;
+            } else {
                 throw new Error('Invalid response format');
             }
 
@@ -101,7 +102,7 @@ async function loadFiles() {
             const files = {};
 
             messages.forEach(message => {
-                if (message && message.content && message.attachments) {
+                if (message && message.content && message.attachments && message.attachments.length > 0) {
                     try {
                         const fileInfo = JSON.parse(message.content);
                         if (!files[fileInfo.fileId]) {
@@ -136,7 +137,7 @@ async function loadFiles() {
                 });
             }
         } else {
-            showToast('Error loading files');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
     } catch (error) {
         console.error('Error loading files:', error);
