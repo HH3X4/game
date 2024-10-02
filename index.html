@@ -3,39 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hexa Box - Advanced Discord Storage</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
+    <title>Space Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid white;
+        }
+        #gameInfo {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-cube"></i> Hexa Box</h1>
-        </header>
-        <main>
-            <div id="setup-section">
-                <h2>Setup</h2>
-                <input type="text" id="webhook-url" placeholder="Enter Discord Webhook URL">
-                <button id="save-webhook">Save Webhook</button>
-            </div>
-            <div id="file-section" class="hidden">
-                <div class="upload-area">
-                    <input type="file" id="file-input" multiple>
-                    <label for="file-input"><i class="fas fa-cloud-upload-alt"></i> Choose Files</label>
-                    <button id="upload-button">Upload</button>
-                </div>
-                <div id="progress-bar" class="hidden">
-                    <div id="progress"></div>
-                </div>
-                <div id="file-list"></div>
-            </div>
-        </main>
-        <footer>
-            <p>&copy; 2023 Hexa Box. All rights reserved.</p>
-        </footer>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameInfo">
+        <div>Score: <span id="score">0</span></div>
+        <div>Health: <span id="health">100</span></div>
+        <div>Level: <span id="level">1</span></div>
     </div>
-    <div id="toast"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="app.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
